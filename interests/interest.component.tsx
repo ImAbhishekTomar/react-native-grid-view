@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Text, View, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Text, View, FlatList, ActivityIndicator, Image } from 'react-native';
 import { StyleType, ThemedComponentProps, ThemeType, withStyles } from '@kitten/theme';
 import SvgUri from 'react-native-svg-uri';
 import InterestsMockup from '../../../DataAccess/mockups/InterestsMockup';
@@ -18,11 +18,51 @@ export type InterestProps = ThemedComponentProps & InterestComponentProps;
 
 interface State {
 	opacityFlag?: boolean;
+	testJson?: any;
 }
 
+// function LazyImageLoad(source: any, ImageLoaded: boolean, ImageType: string | 'svg' | 'other') {
+// 	if (ImageType === 'svg') {
+// 		return ImageLoaded ? <ActivityIndicator /> : <SvgUri width='100%' height='100%' source={source} />;
+// 	} else {
+// 		return ImageLoaded ? (
+// 			<ActivityIndicator />
+// 		) : (
+// 			<Image style={{ width: '100%', height: '100%' }} source={source} />
+// 		);
+// 	}
+// }
+
+const LazyImageLoad = ({ source, ImageLoaded, ImageType }) => {
+	if (ImageType === 'svg') {
+		return ImageLoaded ? <ActivityIndicator /> : <SvgUri width='100%' height='100%' source={source} />;
+	} else {
+		return ImageLoaded ? (
+			<ActivityIndicator />
+		) : (
+			<Image style={{ width: '100%', height: '100%' }} source={source} />
+		);
+	}
+};
+
 const Item = ({ item, onSelect }) => {
-	const [ isSelected, setSelection ] = useState(false);
+	const [ isSelected, setSelected ] = useState(false);
 	const [ selectedItems, setItem ] = useState([]);
+	const [ imageLoading, setLoading ] = useState(false);
+
+	const handlerPress = () => {
+		const ItemExist = selectedItems.filter((f) => f.id === item.id);
+		if (ItemExist.length > 0) {
+			setSelected(false);
+			const dataAfterRemove = selectedItems.filter((f) => f.id !== item.id);
+			setItem([ ...dataAfterRemove ]);
+		} else {
+			setSelected(true);
+			setItem([ ...selectedItems, JSON.stringify(item) ]);
+		}
+		onSelect(item, selectedItems);
+	};
+
 	return (
 		<View
 			style={{
@@ -39,16 +79,7 @@ const Item = ({ item, onSelect }) => {
 			}}
 		>
 			<TouchableOpacity
-				onPress={() => {
-					setSelection(!isSelected);
-					onSelect(item, isSelected, selectedItems);
-					if (!isSelected) {
-						setItem([ ...selectedItems, JSON.stringify(item) ]);
-					} else {
-						const data = selectedItems.filter((i) => i.id !== item.id);
-						setItem(data);
-					}
-				}}
+				onPress={handlerPress}
 				style={{
 					flex: 1,
 					justifyContent: 'space-evenly',
@@ -56,18 +87,16 @@ const Item = ({ item, onSelect }) => {
 					alignContent: 'center'
 				}}
 			>
-				<Animatable.View
-					animation='zoomIn'
-					iterationCount={1}
-					useNativeDriver={true}
+				<View
 					style={{
 						width: isSelected ? 60 : 50,
 						height: isSelected ? 60 : 50,
 						marginBottom: 10
 					}}
 				>
-					<SvgUri width='100%' height='100%' source={item.image} />
-				</Animatable.View>
+					{/* <SvgUri width='100%' height='100%' source={item.image} /> */}
+					<LazyImageLoad ImageType='svg' ImageLoaded={imageLoading} source={item.image} />
+				</View>
 				<Text>{item.name}</Text>
 			</TouchableOpacity>
 		</View>
@@ -75,6 +104,7 @@ const Item = ({ item, onSelect }) => {
 };
 
 class InterestComponent extends React.Component<InterestProps, State> {
+	state: State = { testJson: null };
 	public render(): React.ReactNode {
 		return (
 			<View style={{ flex: 1, marginTop: 10 }}>
@@ -90,11 +120,9 @@ class InterestComponent extends React.Component<InterestProps, State> {
 						data={InterestsMockup}
 						renderItem={({ item }) => (
 							<Item
-								onSelect={(i, s, si) => {
-									// alert(JSON.stringify(i));
-									// console.log(s);
-									// console.log(i);
-									console.log(si);
+								onSelect={(currentItem: any, selectedItems: any) => {
+									console.log('current Item: ', currentItem);
+									console.log('selected Items: ', selectedItems);
 								}}
 								item={item}
 							/>
